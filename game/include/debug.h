@@ -24,6 +24,4 @@ do { \
 	} \
 } while(0)
 
-printf("Hello");
-
 #endif
