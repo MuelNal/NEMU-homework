@@ -15,12 +15,12 @@ The following subprojects/components are included. Some of them are not fully im
 ## NEMU
 
 NEMU(NJU Emulator) is a simple but complete full-system x86 emulator designed for teaching. It is the main part of this programming assignment. Small x86 programs can run under NEMU. The main features of NEMU include
-* a small monitor with a simple debugger
+* a small monitor with a simple debugger //一个简单调试器带有一个监视器
  * single step
- * register/memory examination
- * expression evaluation with the support of symbols
+ * register/memory examination //寄存或者记忆检验
+ * expression evaluation with the support of symbols //表达式求值
  * watch point
- * backtrace
+ * backtrace //栈回溯
 * CPU core with support of most common used x86 instructions in protected mode
  * real mode is not supported
  * x87 floating point instructions are not supported
