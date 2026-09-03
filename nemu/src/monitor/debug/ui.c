@@ -46,7 +46,7 @@ static int cmd_info(char *args) {
 	if(*state=='r'){
 		int i=0;
 		for(;i<8;i++){
-			printf("%s\t%d\n",regsl[i],cpu.gpr[i]._32);
+			printf("%s\t%x\n",regsl[i],cpu.gpr[i]._32);
 		}
 	}
 	else if(*state=='w'){
