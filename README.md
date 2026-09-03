@@ -65,3 +65,5 @@ This is a fork of the demo of NJU 2013 oslab0(the origin repository has been del
 ## NEMU-PAL
 
 This is a fork of Wei Mingzhi's SDLPAL(https://github.com/CecilHarvey/sdlpal). It is obtained by refactoring the original SDLPAL, as well as porting to NEMU.
+
+思考题1：cpu_exec()函数调用的参数是uint32_t，也就是unsigned int类型，-1隐式转换为0xffffffff，在函数体内部的for()循环内部一直执行下去，同时在循环体内部调用exec(cpu.eip)，即取指令后执行，exec通过查询opcode_table判断执行操作，如果是0xd6，nemu_trap指令，就会进入nemu_trap内部，将nemu_state赋值为END，改变状态，然后在cpu_exec()的循环体中判断nemu_state!=RUNNING，退出执行函数，结束程序。即-1指的是运行直到程序结束。
