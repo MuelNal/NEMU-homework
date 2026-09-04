@@ -37,23 +37,73 @@ static int cmd_q(char *args) {
 }
 
 static int cmd_si(char *args) {
-	cpu_exec(1);
+	if(args==NULL){
+		cpu_exec(1);
+	}
+	else {
+		int n;
+		if(sscanf(args,"%d",&n)==1){
+			if(n>0){
+				cpu_exec(n);
+			}
+			else{
+				printf("Invalid number\n");
+			}
+		}
+		else{
+			printf("Unknown command '%s'\n", args);
+		}
+	}
 	return 0;
 }
 
 static int cmd_info(char *args) {
+	if(args==NULL){
+		printf("info r - print registers\ninfo w - print watchpoints\n");
+        return 0;
+	}
 	char *state = strtok(args, " ");
+	if(state==NULL){
+		printf("Invalid input\n");
+		return 0;
+	}
 	if(*state=='r'){
 		int i=0;
 		for(;i<8;i++){
-			printf("%s\t%x\n",regsl[i],cpu.gpr[i]._32);
+			printf("%s\t0x%08x\n",regsl[i],cpu.gpr[i]._32);
 		}
+		printf("eip\t0x%08x\n",cpu.eip);
 	}
 	else if(*state=='w'){
 		printf("Unknown command '%s'\n", state);
 	}
 	else{
 		printf("Unknown command '%s'\n", state);
+	}
+	return 0;
+}
+
+static int cmd_x(char *args){
+	int steps,memory;
+	if(sscanf(args,"%d %x",&steps,&memory)==2){
+		if(steps>=1){
+			int i=0;
+			for(;i<steps;i++){			
+				printf("0x%x:\t",memory+i*4);	
+				int j=0;
+				for(;j<4;j++){
+					int data=swaddr_read(memory+i*4+j,1);
+					printf("%02x ",data);
+				}
+				printf("\n");				
+			}
+		}
+		else{
+			printf("Unknown command '%s'\n", args);
+		}
+	}
+	else{
+		printf("Unknown command '%s'\n", args);
 	}
 	return 0;
 }
@@ -69,7 +119,8 @@ static struct {
 	{ "c", "Continue the execution of the program", cmd_c },
 	{ "q", "Exit NEMU", cmd_q },
 	{ "si", "Single step", cmd_si},
-	{ "info", "Print program state, r for register, w for watchpoints", cmd_info}
+	{ "info", "Print program state, r for registers, w for watchpoints", cmd_info},
+	{ "x", "Scan memory", cmd_x}
 
 	/* TODO: Add more commands */
 
