@@ -108,6 +108,25 @@ static int cmd_x(char *args){
 	return 0;
 }
 
+static int cmd_p(char *args){
+	if(args==NULL){
+		printf("please input a valid expression\n");
+		return 0;
+	}
+	else{
+		bool success;
+		int val=expr(args, &success);
+		if(!success){
+			printf("please input a valid expression\n");
+			return 0;
+		}
+		else{
+			printf("%d\n",val);
+		}
+	}
+	return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -120,7 +139,8 @@ static struct {
 	{ "q", "Exit NEMU", cmd_q },
 	{ "si", "Single step", cmd_si},
 	{ "info", "Print program state, r for registers, w for watchpoints", cmd_info},
-	{ "x", "Scan memory", cmd_x}
+	{ "x", "Scan memory", cmd_x},
+	{"p", "Evaluate an expression", cmd_p}
 
 	/* TODO: Add more commands */
 
