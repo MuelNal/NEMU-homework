@@ -114,7 +114,7 @@ static int cmd_p(char *args){
 		return 0;
 	}
 	else{
-		bool success;
+		bool success=true;
 		int val=expr(args, &success);
 		if(!success){
 			printf("please input a valid expression\n");
@@ -140,7 +140,7 @@ static struct {
 	{ "si", "Single step", cmd_si},
 	{ "info", "Print program state, r for registers, w for watchpoints", cmd_info},
 	{ "x", "Scan memory", cmd_x},
-	{"p", "Evaluate an expression", cmd_p}
+	{ "p", "Evaluate an expression", cmd_p}
 
 	/* TODO: Add more commands */
 

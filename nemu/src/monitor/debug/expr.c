@@ -5,6 +5,11 @@
  */
 #include <sys/types.h>
 #include <regex.h>
+#include <stdlib.h>
+
+int32_t find_op(int32_t p,int32_t q,bool *success);
+bool check_parentheses(int32_t p, int32_t q,bool *success);
+bool check_valid(int32_t p,int32_t q);
 
 enum {
 	NOTYPE = 256, EQ, NUM
@@ -84,29 +89,36 @@ static bool make_token(char *e) {
 				 * of tokens, some extra actions should be performed.
 				 */
 
-				if(substr_len>31) return false;
-
-				 switch(rules[i].token_type) {
-					case NOTYPE:break;
-					case NUM:{						
-						strncpy(tokens[nr_token].str,substr_start,substr_len);
-						nr_token++;
-						break;
+				
+				if(nr_token>31) return false;
+				else{
+					if(substr_len>31&&rules[i].token_type==NUM) {
+						//assert(0);
+						return false;
 					}
-					case '+':
-					case '-':
-					case '*':
-					case '/':
-					case '(':
-					case ')':
-					case '=':{
-						tokens[nr_token].type=rules[i].token_type;
-						nr_token++;
-						break;
+					switch(rules[i].token_type) {
+						case NOTYPE:break;
+						case NUM:{						
+							tokens[nr_token].type=rules[i].token_type;
+							strncpy(tokens[nr_token].str,substr_start,substr_len);
+							tokens[nr_token].str[substr_len] = '\0'; //这里有一个溢出bug
+							nr_token++;
+							break;
+						}
+						case '+':
+						case '-':
+						case '*':
+						case '/':
+						case '(':
+						case ')':
+						case '=':{
+							tokens[nr_token].type=rules[i].token_type;
+							nr_token++;
+							break;
+						}
+						default: panic("please implement me");
 					}
-					default: panic("please implement me");
 				}
-
 				break;
 			}
 		}
@@ -120,14 +132,140 @@ static bool make_token(char *e) {
 	return true; 
 }
 
-uint32_t expr(char *e, bool *success) {
-	if(!make_token(e)) {
-		*success = false;
+int32_t eval(int32_t p,int32_t q,bool *success){
+	if(*success==false){
 		return 0;
 	}
+	if(p>q){
+		return 0;
+	}
+	else if(p==q){
+		if (tokens[p].type != NUM) {
+    	*success = false;
+    	return 0;
+		}
+		return atoi(tokens[p].str);
+	}
+	else if(check_parentheses(p, q,success) == true){
+		return eval(p+1,q-1,success);
+	}
+	else{
+		int op=find_op(p,q,success);
+		if (!*success) return 0;
+		int val1=eval(p,op-1,success);
+		if (!*success) return 0;
+		int val2=eval(op+1,q,success);
+		if (!*success) return 0;
+		switch (tokens[op].type)
+		{
+		case '+': return val1+val2;
+		case '-': return val1-val2;
+		case '*': return val1*val2;
+		case '/': if (val2 == 0) {
+					*success = false;
+					return 0;					
+				}
+				  return val1/val2;
+		default: return 0;
+		}
+	}
+}
 
+int32_t find_op(int32_t p,int32_t q,bool *success){
+	if(*success==false){
+		return 0;
+	}
+	int n=p;
+	while(p<q){
+		if(tokens[q].type=='+'||tokens[q].type=='-'){
+			return q;
+		}
+		else if(tokens[q].type=='*'||tokens[q].type=='/'){
+			if(n<q){
+				n=q;
+			}
+		}
+		else if(tokens[q].type==')'){
+			int k=p;
+			int lp=0;
+			int i=p;
+			for(;i<q;i++){
+				if(tokens[i].type=='(') lp++;
+				else if(tokens[i].type==')') lp--;
+				if(lp==1&&tokens[i].type=='(') p=i;
+			}
+			if(check_parentheses(p,q,success)){
+				q=p;
+				p=k;
+			}
+			else{
+				p++;
+			}
+		}
+		q--;
+	}
+	return n;
+}
+
+bool check_parentheses(int32_t p, int32_t q,bool *success){
+	if(*success==false){
+		return 0;
+	}
+	if(tokens[p].type=='('&&tokens[q].type==')'&&p<q){
+		if(!check_valid(p,q)){
+			*success=false;
+			return false;
+		}
+		int lp=0;
+		while(p<q){
+			if(tokens[p].type=='(') lp++;
+			else if(tokens[p].type==')') lp--;
+			if(lp==0) return false;
+			p++;
+		}
+		return true;
+	}
+	else{
+		return false;
+	}		
+}
+
+bool check_valid(int32_t p,int32_t q){
+	int op=0;
+	int num=0;
+	int lp=0;
+	int rp=0;
+	int i=p;
+	for(;i<=q;i++){
+		if(tokens[i].type==NUM) num++;
+		else if(tokens[i].type=='(') lp++;
+		else if(tokens[i].type==')') rp++;
+		else if(tokens[i].type=='+'||tokens[i].type=='-'||tokens[i].type=='*'||tokens[i].type=='/')op++;
+		if(rp>lp){
+			return false;
+		}
+		if(op>num||num>op+1){
+			return false;
+		}
+	}
+	if(num-1==op&&lp==rp) return true;
+	else {
+		return false;
+	}
+}
+
+int32_t expr(char *e, bool *success) {
+	if(!make_token(e)) {
+		*success = false;
+		//assert(0);
+	}
+	else if(!check_valid(0,nr_token-1)){
+		*success=false;
+	}
 	/* TODO: Insert codes to evaluate the expression. */
-	panic("please implement me");
+	else{
+		return eval(0,nr_token-1,success);
+	}
 	return 0;
 }
 
