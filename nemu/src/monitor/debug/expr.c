@@ -10,6 +10,7 @@
 int32_t find_op(int32_t p,int32_t q,bool *success);
 bool check_parentheses(int32_t p, int32_t q,bool *success);
 bool check_valid(int32_t p,int32_t q);
+void find_NEG(int32_t p,int32_t q);
 
 enum {
 	NOTYPE = 256, EQ, NUM
@@ -62,6 +63,7 @@ void init_regex() {
 typedef struct token {
 	int type;
 	char str[32];
+	bool is_NEG;
 } Token;
 
 Token tokens[32];
@@ -100,6 +102,7 @@ static bool make_token(char *e) {
 						case NOTYPE:break;
 						case NUM:{						
 							tokens[nr_token].type=rules[i].token_type;
+							tokens[nr_token].is_NEG=false;
 							strncpy(tokens[nr_token].str,substr_start,substr_len);
 							tokens[nr_token].str[substr_len] = '\0'; //这里有一个溢出bug
 							nr_token++;
@@ -144,18 +147,33 @@ int32_t eval(int32_t p,int32_t q,bool *success){
     	*success = false;
     	return 0;
 		}
-		return atoi(tokens[p].str);
+		int val=atoi(tokens[p].str);
+		if(!tokens[p].is_NEG){
+			// printf("%d\n",val);
+			return val;
+		}
+		else{
+			//printf("%d\n",0-val);
+			return 0-val;
+		}
 	}
 	else if(check_parentheses(p, q,success) == true){
 		return eval(p+1,q-1,success);
 	}
 	else{
 		int op=find_op(p,q,success);
-		if (!*success) return 0;
+		//printf("op:%d\n",op);
+		if (!*success) {
+			return 0;
+		}
 		int val1=eval(p,op-1,success);
-		if (!*success) return 0;
+		if (!*success) {
+			return 0;
+		}
 		int val2=eval(op+1,q,success);
-		if (!*success) return 0;
+		if (!*success) {
+			return 0;
+		}
 		switch (tokens[op].type)
 		{
 		case '+': return val1+val2;
@@ -166,13 +184,18 @@ int32_t eval(int32_t p,int32_t q,bool *success){
 					return 0;					
 				}
 				  return val1/val2;
-		default: return 0;
+		case NOTYPE: return eval(p+1,q,success);
+		default: {
+				assert(0);
+				return 0;
+			}
 		}
 	}
 }
 
 int32_t find_op(int32_t p,int32_t q,bool *success){
 	if(*success==false){
+		//assert(0);
 		return 0;
 	}
 	int n=p;
@@ -209,6 +232,7 @@ int32_t find_op(int32_t p,int32_t q,bool *success){
 
 bool check_parentheses(int32_t p, int32_t q,bool *success){
 	if(*success==false){
+		//assert(0);
 		return 0;
 	}
 	if(tokens[p].type=='('&&tokens[q].type==')'&&p<q){
@@ -254,13 +278,36 @@ bool check_valid(int32_t p,int32_t q){
 	}
 }
 
+void find_NEG(int32_t p,int32_t q){
+	int i=p+1;
+	for(;i<=q;i++){
+		if(tokens[i].type==NUM&&tokens[i-1].type=='-'){
+			if(i-1==p){
+				tokens[i-1].type=NOTYPE;
+				tokens[i].is_NEG=true;
+			}
+			else if(i-1>p){
+				if(tokens[i-2].type=='('){
+					tokens[i-1].type=NOTYPE;
+					tokens[i].is_NEG=true;
+				}
+			}
+		}
+	}
+}
+
 int32_t expr(char *e, bool *success) {
 	if(!make_token(e)) {
 		*success = false;
 		//assert(0);
+		return 0;
 	}
-	else if(!check_valid(0,nr_token-1)){
+	
+	find_NEG(0,nr_token-1);
+
+	if(!check_valid(0,nr_token-1)){
 		*success=false;
+		//assert(0);
 	}
 	/* TODO: Insert codes to evaluate the expression. */
 	else{
