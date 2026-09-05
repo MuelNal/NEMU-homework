@@ -70,9 +70,9 @@ static int cmd_info(char *args) {
 	if(*state=='r'){
 		int i=0;
 		for(;i<8;i++){
-			printf("%s\t0x%08x\n",regsl[i],cpu.gpr[i]._32);
+			printf("$%s\t(0x%08x)\n",regsl[i],cpu.gpr[i]._32);
 		}
-		printf("eip\t0x%08x\n",cpu.eip);
+		printf("$eip\t(0x%08x)\n",cpu.eip);
 	}
 	else if(*state=='w'){
 		printf("Unknown command '%s'\n", state);
@@ -89,12 +89,13 @@ static int cmd_x(char *args){
 		if(steps>=1){
 			int i=0;
 			for(;i<steps;i++){			
-				printf("0x%x:\t",memory+i*4);	
-				int j=0;
-				for(;j<4;j++){
-					int data=swaddr_read(memory+i*4+j,1);
-					printf("%02x ",data);
-				}
+				uint32_t data=swaddr_read(memory+i*4,4);
+				printf("0x%08x",data);	
+				// int j=0;
+				// for(;j<4;j++){
+				// 	int data=swaddr_read(memory+i*4+j,1);
+				// 	printf("%02x ",data);
+				// }
 				printf("\n");				
 			}
 		}
@@ -115,12 +116,13 @@ static int cmd_p(char *args){
 	}
 	else{
 		bool success=true;
-		int val=expr(args, &success);
+		uint32_t val=expr(args, &success);
 		if(!success){
 			printf("please input a valid expression\n");
 			return 0;
 		}
 		else{
+			printf("0x%08x\n",val);
 			printf("%d\n",val);
 		}
 	}

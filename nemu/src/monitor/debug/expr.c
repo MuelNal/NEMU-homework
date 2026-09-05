@@ -11,10 +11,12 @@ int32_t find_op(int32_t p,int32_t q,bool *success);
 bool check_parentheses(int32_t p, int32_t q,bool *success);
 bool check_valid(int32_t p,int32_t q);
 void find_NEG(int32_t p,int32_t q);
+void find_DRpointer(int32_t p,int32_t q);
+bool is_Uop(int32_t p,int32_t q);
 
 enum {
-	NOTYPE = 256, EQ, NUM
-
+	NOTYPE = 256, EQ, NUM, HEX, AND, OR, NEQ, NOT, DRp, NEG, REG
+	// REG_EAX=0, REG_ECX=1, REG_EDX=2, REG_EBX=3, REG_ESP=4, REG_EDP=5, REG_ESI=6, REG_EDI=7, REG_EIP=8
 	/* TODO: Add more token types */
 
 };
@@ -30,13 +32,28 @@ static struct rule {
 
 	{" +",	NOTYPE},				// spaces
 	{"\\+", '+'},					// plus
-	{"=", EQ},						// equal
-	{"[0-9]+", NUM},					//number
+	{"==", EQ},						// equal
+	{"\\b[0-9]+\\b", NUM},			    //number
 	{"-", '-'},						//subtraction
 	{"\\*", '*'},					//multiplication
 	{"/", '/'},						//division
 	{"\\(", '('},					//LPAREN
-	{"\\)", ')'}						//RPAREN
+	{"\\)", ')'},					//RPAREN
+	// {"\\$eax", REG_EAX}, 			//eax
+	// {"\\$ecx", REG_ECX}, 			//ecx
+	// {"\\$edx", REG_EDX}, 			//edx
+	// {"\\$ebx", REG_EBX}, 			//ebx
+	// {"\\$esp", REG_ESP}, 			//esp
+	// {"\\$edp", REG_EDP}, 			//edp
+	// {"\\$esi", REG_ESI}, 			//esi
+	// {"\\$edi", REG_EDI}, 			//edi
+	// {"\\$eip", REG_EIP}, 			//eip
+	{"\\$(eax|ecx|edx|ebx|esp|edp|esi|edi|eip)",REG},
+	{"\\b0x[0-9A-Fa-f]+\\b",HEX},	//hexadecimal-number
+	{"&&",AND},						//and
+	{"\\|\\|",OR},						//or
+	{"!=",NEQ},				//not equal
+	{"!",NOT},				//not
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
@@ -63,7 +80,7 @@ void init_regex() {
 typedef struct token {
 	int type;
 	char str[32];
-	bool is_NEG;
+	// bool is_NEG;
 } Token;
 
 Token tokens[32];
@@ -100,9 +117,19 @@ static bool make_token(char *e) {
 					}
 					switch(rules[i].token_type) {
 						case NOTYPE:break;
-						case NUM:{						
+						case REG:
+						case NUM:
+						// {						
+						// 	tokens[nr_token].type=rules[i].token_type;
+						// 	// tokens[nr_token].is_NEG=false;
+						// 	strncpy(tokens[nr_token].str,substr_start,substr_len);
+						// 	tokens[nr_token].str[substr_len] = '\0'; //这里有一个溢出bug
+						// 	nr_token++;
+						// 	break;
+						// }
+						case HEX:
+						{
 							tokens[nr_token].type=rules[i].token_type;
-							tokens[nr_token].is_NEG=false;
 							strncpy(tokens[nr_token].str,substr_start,substr_len);
 							tokens[nr_token].str[substr_len] = '\0'; //这里有一个溢出bug
 							nr_token++;
@@ -114,7 +141,12 @@ static bool make_token(char *e) {
 						case '/':
 						case '(':
 						case ')':
-						case '=':{
+						case AND:
+						case OR:
+						case NEQ:
+						case EQ:
+						case NOT:
+						{
 							tokens[nr_token].type=rules[i].token_type;
 							nr_token++;
 							break;
@@ -143,54 +175,111 @@ int32_t eval(int32_t p,int32_t q,bool *success){
 		return 0;
 	}
 	else if(p==q){
-		if (tokens[p].type != NUM) {
-    	*success = false;
-    	return 0;
-		}
-		int val=atoi(tokens[p].str);
-		if(!tokens[p].is_NEG){
-			// printf("%d\n",val);
+		uint32_t val;
+		if (tokens[p].type == NUM) {
+			val=strtoul(tokens[p].str,NULL,10);
 			return val;
 		}
-		else{
-			//printf("%d\n",0-val);
-			return 0-val;
+		else if(tokens[p].type==HEX){
+			val=strtoul(tokens[p].str,NULL,16);
+			return val;
 		}
+		else if(tokens[p].type==REG){
+			if(strcmp(tokens[p].str,"$eax")==0){
+				return cpu.eax;
+			}
+			else if(strcmp(tokens[p].str,"$ecx")==0){
+				return cpu.ecx;
+			}
+			else if(strcmp(tokens[p].str,"$edx")==0){
+				return cpu.edx;
+			}
+			else if(strcmp(tokens[p].str,"$ebx")==0){
+				return cpu.ebx;
+			}
+			else if(strcmp(tokens[p].str,"$esp")==0){
+				return cpu.esp;
+			}
+			else if(strcmp(tokens[p].str,"$ebp")==0){
+				return cpu.ebp;
+			}
+			else if(strcmp(tokens[p].str,"$esi")==0){
+				return cpu.esi;
+			}
+			else if(strcmp(tokens[p].str,"$edi")==0){
+				return cpu.edi;
+			}
+			else if(strcmp(tokens[p].str,"$eip")==0){
+				return cpu.eip;
+			}
+		}
+		else{
+			*success = false;
+    		return 0;
+		}
+
+		// if(!tokens[p].is_NEG){
+		// 	// printf("%d\n",val);
+
+		// }
+		// else{
+		// 	//printf("%d\n",0-val);
+		// 	return 0-val;
+		// }
 	}
 	else if(check_parentheses(p, q,success) == true){
 		return eval(p+1,q-1,success);
 	}
 	else{
-		int op=find_op(p,q,success);
-		//printf("op:%d\n",op);
-		if (!*success) {
+		if(*success==false){
 			return 0;
 		}
-		int val1=eval(p,op-1,success);
-		if (!*success) {
-			return 0;
-		}
-		int val2=eval(op+1,q,success);
-		if (!*success) {
-			return 0;
-		}
-		switch (tokens[op].type)
-		{
-		case '+': return val1+val2;
-		case '-': return val1-val2;
-		case '*': return val1*val2;
-		case '/': if (val2 == 0) {
-					*success = false;
-					return 0;					
-				}
-				  return val1/val2;
-		case NOTYPE: return eval(p+1,q,success);
-		default: {
-				assert(0);
-				return 0;
+		if(is_Uop(p,q)){
+			switch (tokens[p].type)
+			{
+			case NOT: return !eval(p+1,q,success);
+			case DRp: return swaddr_read(eval(p+1,q,success),4);
+			case NEG: return 0-eval(p+1,q,success);
+			default: assert(0);break;
 			}
 		}
+		else{
+			int op=find_op(p,q,success);
+			// printf("op:%d\n",op);
+			if (!*success) {
+				return 0;
+			}
+			int val1=eval(p,op-1,success);
+			if (!*success) {
+				return 0;
+			}
+			int val2=eval(op+1,q,success);
+			if (!*success) {
+				return 0;
+			}
+			switch (tokens[op].type)
+			{
+			case '+': return val1+val2;
+			case '-': return val1-val2;
+			case '*': return val1*val2;
+			case '/': if (val2 == 0) {
+						*success = false;
+						return 0;					
+					}
+					return val1/val2;
+			case AND: return val1&&val2;
+			case OR:  return val1||val2;
+			case EQ:  return val1==val2;
+			case NEQ: return val1!=val2;
+			default: {
+				printf("%d\n",tokens[op].type);	
+				assert(0);
+					return 0;
+				}
+			}
+		}		
 	}
+	return 0;
 }
 
 int32_t find_op(int32_t p,int32_t q,bool *success){
@@ -198,14 +287,32 @@ int32_t find_op(int32_t p,int32_t q,bool *success){
 		//assert(0);
 		return 0;
 	}
-	int n=p;
+	bool p1=false;
+	bool p2=false;
+	bool p3=false;
+	int n1=p;
+	int n2=p;
+	int n3=p;
 	while(p<q){
-		if(tokens[q].type=='+'||tokens[q].type=='-'){
+		if(tokens[q].type==AND||tokens[q].type==OR){
 			return q;
 		}
+		else if(tokens[q].type==EQ||tokens[q].type==NEQ){
+			p1=true;
+			if(n1<q){
+				n1=q;
+			}
+		}
+		else if(tokens[q].type=='+'||tokens[q].type=='-'){
+			p2=true;
+			if(n2<q){
+				n2=q;
+			}
+		}
 		else if(tokens[q].type=='*'||tokens[q].type=='/'){
-			if(n<q){
-				n=q;
+			p3=true;
+			if(n3<q){
+				n3=q;
 			}
 		}
 		else if(tokens[q].type==')'){
@@ -227,7 +334,9 @@ int32_t find_op(int32_t p,int32_t q,bool *success){
 		}
 		q--;
 	}
-	return n;
+	if(p1) return n1;
+	else if(p2) return n2;
+	else return n3;
 }
 
 bool check_parentheses(int32_t p, int32_t q,bool *success){
@@ -261,10 +370,11 @@ bool check_valid(int32_t p,int32_t q){
 	int rp=0;
 	int i=p;
 	for(;i<=q;i++){
-		if(tokens[i].type==NUM) num++;
+		if(tokens[i].type==NUM||tokens[i].type==REG||tokens[i].type==HEX) num++;
 		else if(tokens[i].type=='(') lp++;
 		else if(tokens[i].type==')') rp++;
-		else if(tokens[i].type=='+'||tokens[i].type=='-'||tokens[i].type=='*'||tokens[i].type=='/')op++;
+		else if(tokens[i].type=='+'||tokens[i].type=='-'||tokens[i].type=='*'||tokens[i].type=='/'||
+				tokens[i].type==AND||tokens[i].type==OR||tokens[i].type==EQ||tokens[i].type==NEQ)op++;
 		if(rp>lp){
 			return false;
 		}
@@ -279,24 +389,38 @@ bool check_valid(int32_t p,int32_t q){
 }
 
 void find_NEG(int32_t p,int32_t q){
-	int i=p+1;
+	int i=p;
 	for(;i<=q;i++){
-		if(tokens[i].type==NUM&&tokens[i-1].type=='-'){
-			if(i-1==p){
-				tokens[i-1].type=NOTYPE;
-				tokens[i].is_NEG=true;
+		if(tokens[i].type=='-'&&(i==0||tokens[i-1].type=='(')){
+			tokens[i].type=NEG;
 			}
-			else if(i-1>p){
-				if(tokens[i-2].type=='('){
-					tokens[i-1].type=NOTYPE;
-					tokens[i].is_NEG=true;
-				}
-			}
-		}
 	}
 }
 
-int32_t expr(char *e, bool *success) {
+void find_DRpointer(int32_t p,int32_t q){
+	int i=p+1;
+	for(; i<=q; i++) {
+		if(tokens[i].type == '*' && (i == 0 || tokens[i-1].type=='+'||tokens[i-1].type=='-'||tokens[i-1].type=='*'
+			||tokens[i-1].type=='/'||tokens[i-1].type==AND||tokens[i-1].type==OR||tokens[i-1].type==NOT||
+			tokens[i-1].type==NEQ||tokens[i-1].type==EQ) ) 
+			{
+				tokens[i].type = DRp;
+			}
+	}
+}
+
+bool is_Uop(int32_t p,int32_t q){
+	// printf("%d\t%d\n",p,q);
+	if(tokens[p].type==NEG||tokens[p].type==DRp||tokens[p].type==NOT){
+		if(q==p+1||(tokens[p+1].type=='('&&tokens[q].type==')')){
+			// printf("true\n");
+			return true;
+		}
+	}
+	return false;
+}
+
+uint32_t expr(char *e, bool *success) {
 	if(!make_token(e)) {
 		*success = false;
 		//assert(0);
@@ -304,6 +428,7 @@ int32_t expr(char *e, bool *success) {
 	}
 	
 	find_NEG(0,nr_token-1);
+	find_DRpointer(0,nr_token-1);
 
 	if(!check_valid(0,nr_token-1)){
 		*success=false;
