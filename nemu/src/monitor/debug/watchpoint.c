@@ -51,8 +51,9 @@ int set_watchpoint(char *args){
 	else return -1;
 }
 
-void del_watchpoint(int num){
-	assert(wp_pool[num].in_use==true);
+bool del_watchpoint(int num){
+	if(wp_pool[num].in_use!=true)
+		return false;
 	WP *wp=&wp_pool[num];
 	WP *prev=NULL,*cur=head;
 	while(cur != NULL && cur != wp){
@@ -71,6 +72,20 @@ void del_watchpoint(int num){
 		prev->next=NULL;
 	}
 	free_wp(wp);
+	return true;
+}
+
+void del_all_watchpoint_recursively(WP *p){
+	if (p == NULL)
+		return;
+	if (p->next != NULL)
+		del_all_watchpoint_recursively(p->next);
+	free_wp(p);  
+}
+
+void del_all_watchpoint(){
+	del_all_watchpoint_recursively(head); 
+	head = NULL;
 }
 
 void list_watchpoint(){

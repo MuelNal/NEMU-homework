@@ -147,6 +147,39 @@ static int cmd_w(char *args){
 	return 0;
 }
 
+static int cmd_d(char *args){
+	if(args==NULL){
+		printf("please input a valid expression\n");
+		return 0;
+	}
+	else{
+		int num;
+		char all[32];
+		if(sscanf(args,"%d",&num)==1){
+			bool success=del_watchpoint(num);
+			if(success){
+				printf("Successfully delete watchpoint %d\n",num);
+				return 0;
+			}
+			else{
+				printf("No watchpoint %d\n",num);
+			}
+		}
+		else if(sscanf(args,"%s",all)==1){
+			if(strcmp(all,"all")==0){
+				del_all_watchpoint();
+				printf("Successfully delete all watchpoints\n");
+				return 0;
+			}
+			else{
+				printf("please input a valid expression\n");
+			}
+
+		}
+	}
+	return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -161,7 +194,8 @@ static struct {
 	{ "info", "Print program state, r for registers, w for watchpoints", cmd_info},
 	{ "x", "Scan memory", cmd_x},
 	{ "p", "Evaluate an expression", cmd_p},
-	{ "w", "Set a watchpoint", cmd_w}
+	{ "w", "Set a watchpoint", cmd_w},
+	{ "d", "Delete a watchpoint", cmd_d}
 
 	/* TODO: Add more commands */
 
