@@ -48,7 +48,7 @@ static struct rule {
 	// {"\\$esi", REG_ESI}, 			//esi
 	// {"\\$edi", REG_EDI}, 			//edi
 	// {"\\$eip", REG_EIP}, 			//eip
-	{"\\$(eax|ecx|edx|ebx|esp|edp|esi|edi|eip)",REG},
+	{"\\$(eax|ecx|edx|ebx|esp|ebp|esi|edi|eip)",REG},
 	{"\\b0x[0-9A-Fa-f]+\\b",HEX},	//hexadecimal-number
 	{"&&",AND},						//and
 	{"\\|\\|",OR},						//or
@@ -100,7 +100,7 @@ static bool make_token(char *e) {
 				char *substr_start = e + position;
 				int substr_len = pmatch.rm_eo;
 
-				Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i, rules[i].regex, position, substr_len, substr_len, substr_start);
+				//Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i, rules[i].regex, position, substr_len, substr_len, substr_start);
 				position += substr_len;
 
 				/* TODO: Now a new token is recognized with rules[i]. Add codes
@@ -111,7 +111,7 @@ static bool make_token(char *e) {
 				
 				if(nr_token>31) return false;
 				else{
-					if(substr_len>31&&rules[i].token_type==NUM) {
+					if(substr_len>31&&(rules[i].token_type==NUM||rules[i].token_type==HEX)) {
 						//assert(0);
 						return false;
 					}
@@ -391,18 +391,19 @@ bool check_valid(int32_t p,int32_t q){
 void find_NEG(int32_t p,int32_t q){
 	int i=p;
 	for(;i<=q;i++){
-		if(tokens[i].type=='-'&&(i==0||tokens[i-1].type=='(')){
+		if(tokens[i].type=='-'&&(i==0||tokens[i-1].type=='('||tokens[i-1].type==NOT||tokens[i-1].type==DRp))
+		{
 			tokens[i].type=NEG;
-			}
+		}
 	}
 }
 
 void find_DRpointer(int32_t p,int32_t q){
-	int i=p+1;
+	int i=p;
 	for(; i<=q; i++) {
-		if(tokens[i].type == '*' && (i == 0 || tokens[i-1].type=='+'||tokens[i-1].type=='-'||tokens[i-1].type=='*'
-			||tokens[i-1].type=='/'||tokens[i-1].type==AND||tokens[i-1].type==OR||tokens[i-1].type==NOT||
-			tokens[i-1].type==NEQ||tokens[i-1].type==EQ) ) 
+		if(tokens[i].type == '*' && (i == 0||tokens[i-1].type=='(' || tokens[i-1].type=='+'||tokens[i-1].type=='-'||
+			tokens[i-1].type=='/'||tokens[i-1].type==AND||tokens[i-1].type==OR||tokens[i-1].type==NOT||
+			tokens[i-1].type==NEQ||tokens[i-1].type==EQ||tokens[i-1].type==NEG||tokens[i-1].type==DRp) ) 
 			{
 				tokens[i].type = DRp;
 			}
@@ -412,7 +413,7 @@ void find_DRpointer(int32_t p,int32_t q){
 bool is_Uop(int32_t p,int32_t q){
 	// printf("%d\t%d\n",p,q);
 	if(tokens[p].type==NEG||tokens[p].type==DRp||tokens[p].type==NOT){
-		if(q==p+1||(tokens[p+1].type=='('&&tokens[q].type==')')){
+		if(q==p+1||(tokens[p+1].type=='('&&tokens[q].type==')')||(tokens[p+1].type==NEG||tokens[p+1].type==DRp||tokens[p+1].type==NOT)){
 			// printf("true\n");
 			return true;
 		}

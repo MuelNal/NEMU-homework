@@ -75,7 +75,7 @@ static int cmd_info(char *args) {
 		printf("$eip\t(0x%08x)\n",cpu.eip);
 	}
 	else if(*state=='w'){
-		printf("Unknown command '%s'\n", state);
+		list_watchpoint();
 	}
 	else{
 		printf("Unknown command '%s'\n", state);
@@ -129,6 +129,24 @@ static int cmd_p(char *args){
 	return 0;
 }
 
+static int cmd_w(char *args){
+	if(args==NULL){
+		printf("please input a valid expression\n");
+		return 0;
+	}
+	else{
+		int num=set_watchpoint(args);
+		if(num<0){
+			printf("please input a valid expression\n");
+		}
+		else{
+			printf("Successfully set watchpoint %d\n",num);
+		}
+		
+	}
+	return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -142,7 +160,8 @@ static struct {
 	{ "si", "Single step", cmd_si},
 	{ "info", "Print program state, r for registers, w for watchpoints", cmd_info},
 	{ "x", "Scan memory", cmd_x},
-	{ "p", "Evaluate an expression", cmd_p}
+	{ "p", "Evaluate an expression", cmd_p},
+	{ "w", "Set a watchpoint", cmd_w}
 
 	/* TODO: Add more commands */
 
