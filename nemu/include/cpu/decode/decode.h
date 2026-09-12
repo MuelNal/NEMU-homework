@@ -9,11 +9,13 @@ make_helper(decode_r_l);
 make_helper(decode_rm_b);
 make_helper(decode_rm_w);
 make_helper(decode_rm_l);
-make_helper(decode_i_b);
+make_helper(decode_i_b);       //单操作数用i，多操作数用si
 make_helper(decode_i_w);
 make_helper(decode_i_l);
-make_helper(decode_si_b);
+make_helper(decode_si_b);       //将立即数送入寄存器
 make_helper(decode_si_l);
+make_helper(decode_si_w);
+
 
 make_helper(decode_i2rm_b);
 make_helper(decode_i2rm_w);
@@ -45,7 +47,7 @@ make_helper(decode_rm_1_w);
 make_helper(decode_rm_1_l);
 make_helper(decode_rm_cl_b);
 make_helper(decode_rm_cl_w);
-make_helper(decode_rm_cl_l);
+make_helper(decode_rm_cl_l);    //cl是ecx的低8位
 make_helper(decode_rm_imm_b);
 make_helper(decode_rm_imm_w);
 make_helper(decode_rm_imm_l);
