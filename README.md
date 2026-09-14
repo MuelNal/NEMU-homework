@@ -77,3 +77,6 @@ shell命令find . -name "*.c" -o -name "*.h" | xargs wc -l
 去除空行find . -name "*.c" -o -name "*.h" | xargs cat | grep -v "^$$" | wc -l
 -Wall,开启 gcc 绝大多数编译警告。会把很多潜在风险提示出来：未使用变量、类型隐式转换、数组越界、隐式函数声明等问题。警告默认不会阻止编译，但提示代码隐患。
 -Werror,将所有警告全部升级为错误,出现警告，编译直接终止。
+
+PA2思考题1：程序从main返回以后回到10000f:	b8 00 00 00 00       	mov    $0x0,%eax ,100014:	d6    也就是将eax清零,然后通过nemu_trap结束程序
+思考题2：

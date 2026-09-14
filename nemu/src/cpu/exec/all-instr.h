@@ -6,8 +6,10 @@
 #include "data-mov/cltd.h"
 #include "data-mov/push.h"
 #include "data-mov/pop.h"
+#include "data-mov/leave.h"
 
 #include "arith/adc.h"
+#include "arith/add.h"
 #include "arith/dec.h"
 #include "arith/inc.h"
 #include "arith/neg.h"
@@ -38,8 +40,10 @@
 #include "string/scas.h"
 #include "string/stos.h"
 #include "string/movs.h"
+#include "string/lods.h"
 
 #include "misc/misc.h"
+#include "misc/setcc.h"
 
 #include "special/special.h"
 

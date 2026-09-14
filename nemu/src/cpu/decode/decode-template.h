@@ -21,11 +21,21 @@ make_helper(concat(decode_i_, SUFFIX)) {
 	return DATA_BYTE;
 }
 
-#if DATA_BYTE == 1 || DATA_BYTE == 4 || DATA_BYTE == 2
+#if DATA_BYTE == 1 || DATA_BYTE == 2 || DATA_BYTE == 4
 /* sign immediate */
 make_helper(concat(decode_si_, SUFFIX)) {
 	op_src->type = OP_TYPE_IMM;
-	op_src->simm = instr_fetch(eip, DATA_BYTE);
+	uint32_t data=instr_fetch(eip, DATA_BYTE);
+	if(DATA_BYTE==1){
+		op_src->simm = (int8_t)data;
+	}
+	else if(DATA_BYTE==2){
+		op_src->simm = (int16_t)data;
+	}
+	else if(DATA_BYTE==4){
+		op_src->simm = (int32_t)data;
+	}
+	
 	/* TODO: Use instr_fetch() to read `DATA_BYTE' bytes of memory pointed
 	 * by `eip'. Interpret the result as an signed immediate, and assign
 	 * it to op_src->simm.
