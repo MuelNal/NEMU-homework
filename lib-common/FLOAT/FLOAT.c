@@ -1,8 +1,7 @@
 #include "FLOAT.h"
 
 FLOAT F_mul_F(FLOAT a, FLOAT b) {
-	nemu_assert(0);
-	return 0;
+	return (FLOAT)(((long long)a * b) >> 16);
 }
 
 FLOAT F_div_F(FLOAT a, FLOAT b) {
@@ -23,9 +22,10 @@ FLOAT F_div_F(FLOAT a, FLOAT b) {
 	 * It is OK not to use the template above, but you should figure
 	 * out another way to perform the division.
 	 */
-
-	nemu_assert(0);
-	return 0;
+	int q, r;
+	asm volatile ("idivl %4" : "=a"(q), "=d"(r)
+	              : "a"(a << 16), "d"(a >> 16), "r"(b) : "cc");
+	return q;
 }
 
 FLOAT f2F(float a) {
@@ -38,14 +38,22 @@ FLOAT f2F(float a) {
 	 * stack. How do you retrieve it to another variable without
 	 * performing arithmetic operations on it directly?
 	 */
-
-	nemu_assert(0);
-	return 0;
+	int f;
+	memcpy(&f, &a, sizeof(float));
+	if ((f & 0x7fffffff) == 0) return 0;
+	int f_s = f >> 31;
+	int f_exp = (f & 0x7fffffff) >> 23;
+	int f_frac = f & 0x007fffff;
+	if (f_exp == 0xff) { nemu_assert(0); return 0; }
+	if (f_exp < 110 || f_exp > 141) { nemu_assert(0); return 0; }
+	f_frac |= 0x00800000;
+	int mag = (f_exp > 134) ? (f_frac << (f_exp - 134)) : (f_frac >> (134 - f_exp));
+	return f_s ? -mag : mag;
+	
 }
 
 FLOAT Fabs(FLOAT a) {
-	nemu_assert(0);
-	return 0;
+	return a < 0 ? -a : a;
 }
 
 /* Functions below are already implemented */

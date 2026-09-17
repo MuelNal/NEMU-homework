@@ -10,7 +10,28 @@ static void do_execute() {
 }
 
 make_instr_helper(si)
-make_instr_helper(rm)
+
+#if DATA_BYTE == 4
+make_helper(call_rm_l) {
+	int len = decode_rm_l(eip + 1);
+	cpu.esp -= 4;
+	MEM_W(cpu.esp, eip + len + 1);
+	cpu.eip = op_src->val - (len + 1);
+	print_asm(str(instr) " *%s", op_src->str);
+	return len + 1;
+}
+#endif
+
+#if DATA_BYTE == 2
+make_helper(call_rm_w) {
+	int len = decode_rm_w(eip + 1);
+	cpu.esp -= 2;
+	MEM_W(cpu.esp, eip + len + 1);
+	cpu.eip = op_src->val - (len + 1);
+	print_asm(str(instr) " *%s", op_src->str);
+	return len + 1;
+}
+#endif
 
 
 /*
