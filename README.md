@@ -80,3 +80,4 @@ shell命令find . -name "*.c" -o -name "*.h" | xargs wc -l
 
 PA2思考题1：程序从main返回以后回到10000f:	b8 00 00 00 00       	mov    $0x0,%eax ,100014:	d6    也就是将eax清零,然后通过nemu_trap结束程序
 思考题2：FLOAT比float拥有均匀的绝对精度和硬件设计更加简单，但是不能表示非常大或者非常小的数
+思考题3：

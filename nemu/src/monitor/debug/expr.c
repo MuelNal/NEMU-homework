@@ -6,6 +6,11 @@
 #include <sys/types.h>
 #include <regex.h>
 #include <stdlib.h>
+#include <elf.h>
+
+extern char *strtab;
+extern Elf32_Sym *symtab;
+extern int nr_symtab_entry;
 
 int32_t find_op(int32_t p,int32_t q,bool *success);
 bool check_parentheses(int32_t p, int32_t q,bool *success);
@@ -15,7 +20,7 @@ void find_DRpointer(int32_t p,int32_t q);
 bool is_Uop(int32_t p,int32_t q);
 
 enum {
-	NOTYPE = 256, EQ, NUM, HEX, AND, OR, NEQ, NOT, DRp, NEG, REG
+	NOTYPE = 256, EQ, NUM, HEX, AND, OR, NEQ, NOT, DRp, NEG, REG, STAB
 	// REG_EAX=0, REG_ECX=1, REG_EDX=2, REG_EBX=3, REG_ESP=4, REG_EDP=5, REG_ESI=6, REG_EDI=7, REG_EIP=8
 	/* TODO: Add more token types */
 
@@ -33,27 +38,19 @@ static struct rule {
 	{" +",	NOTYPE},				// spaces
 	{"\\+", '+'},					// plus
 	{"==", EQ},						// equal
-	{"\\b[0-9]+\\b", NUM},			    //number
+	{"\\b[0-9]+\\b", NUM},			//number
 	{"-", '-'},						//subtraction
 	{"\\*", '*'},					//multiplication
 	{"/", '/'},						//division
 	{"\\(", '('},					//LPAREN
 	{"\\)", ')'},					//RPAREN
-	// {"\\$eax", REG_EAX}, 			//eax
-	// {"\\$ecx", REG_ECX}, 			//ecx
-	// {"\\$edx", REG_EDX}, 			//edx
-	// {"\\$ebx", REG_EBX}, 			//ebx
-	// {"\\$esp", REG_ESP}, 			//esp
-	// {"\\$edp", REG_EDP}, 			//edp
-	// {"\\$esi", REG_ESI}, 			//esi
-	// {"\\$edi", REG_EDI}, 			//edi
-	// {"\\$eip", REG_EIP}, 			//eip
 	{"\\$(eax|ecx|edx|ebx|esp|ebp|esi|edi|eip)",REG},
 	{"\\b0x[0-9A-Fa-f]+\\b",HEX},	//hexadecimal-number
 	{"&&",AND},						//and
-	{"\\|\\|",OR},						//or
-	{"!=",NEQ},				//not equal
-	{"!",NOT},				//not
+	{"\\|\\|",OR},					//or
+	{"!=",NEQ},						//not equal
+	{"!",NOT},						//not
+	{"\\b[A-Za-z0-9_]+\\b",STAB}					//symbol table
 };
 
 #define NR_REGEX (sizeof(rules) / sizeof(rules[0]) )
@@ -111,7 +108,7 @@ static bool make_token(char *e) {
 				
 				if(nr_token>31) return false;
 				else{
-					if(substr_len>31&&(rules[i].token_type==NUM||rules[i].token_type==HEX)) {
+					if(substr_len>31&&!(rules[i].token_type==NUM||rules[i].token_type==HEX||rules[i].token_type==STAB)) {
 						//assert(0);
 						return false;
 					}
@@ -119,15 +116,8 @@ static bool make_token(char *e) {
 						case NOTYPE:break;
 						case REG:
 						case NUM:
-						// {						
-						// 	tokens[nr_token].type=rules[i].token_type;
-						// 	// tokens[nr_token].is_NEG=false;
-						// 	strncpy(tokens[nr_token].str,substr_start,substr_len);
-						// 	tokens[nr_token].str[substr_len] = '\0'; //这里有一个溢出bug
-						// 	nr_token++;
-						// 	break;
-						// }
 						case HEX:
+						case STAB:
 						{
 							tokens[nr_token].type=rules[i].token_type;
 							strncpy(tokens[nr_token].str,substr_start,substr_len);
@@ -184,6 +174,19 @@ int32_t eval(int32_t p,int32_t q,bool *success){
 			val=strtoul(tokens[p].str,NULL,16);
 			return val;
 		}
+		else if(tokens[p].type==STAB){
+			int i=0;
+			char* sym_name;
+			for(;i<nr_symtab_entry;i++){
+				sym_name=strtab+symtab[i].st_name;
+				if(strcmp(sym_name,tokens[p].str)==0){
+					val=symtab[i].st_value;
+					return val;
+				}
+			}
+			*success=false;
+			return 0;
+		}					
 		else if(tokens[p].type==REG){
 			if(strcmp(tokens[p].str,"$eax")==0){
 				return cpu.eax;
@@ -217,15 +220,6 @@ int32_t eval(int32_t p,int32_t q,bool *success){
 			*success = false;
     		return 0;
 		}
-
-		// if(!tokens[p].is_NEG){
-		// 	// printf("%d\n",val);
-
-		// }
-		// else{
-		// 	//printf("%d\n",0-val);
-		// 	return 0-val;
-		// }
 	}
 	else if(check_parentheses(p, q,success) == true){
 		return eval(p+1,q-1,success);
@@ -370,7 +364,7 @@ bool check_valid(int32_t p,int32_t q){
 	int rp=0;
 	int i=p;
 	for(;i<=q;i++){
-		if(tokens[i].type==NUM||tokens[i].type==REG||tokens[i].type==HEX) num++;
+		if(tokens[i].type==NUM||tokens[i].type==REG||tokens[i].type==HEX||tokens[i].type==STAB) num++;
 		else if(tokens[i].type=='(') lp++;
 		else if(tokens[i].type==')') rp++;
 		else if(tokens[i].type=='+'||tokens[i].type=='-'||tokens[i].type=='*'||tokens[i].type=='/'||
