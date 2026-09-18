@@ -2,10 +2,15 @@
 #include "monitor/expr.h"
 #include "monitor/watchpoint.h"
 #include "nemu.h"
-
+#include <elf.h>
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <common.h>
+
+extern char *strtab;
+extern Elf32_Sym *symtab;
+extern int nr_symtab_entry;
 
 void cpu_exec(uint32_t);
 
@@ -180,6 +185,57 @@ static int cmd_d(char *args){
 	return 0;
 }
 
+static int cmd_bt(char *args){
+	if(args!=NULL){
+		printf("please input a valid expression\n");
+		return 0;
+	}
+	else{
+		swaddr_t ebp=cpu.ebp;
+		swaddr_t eip=cpu.eip;
+		//printf("0x%08x\n0x%08x\n",ebp,eip);
+		if(ebp==0){
+			printf("No backtrace\n");
+			return 0;
+		}
+		swaddr_t prev_ebp;
+		swaddr_t ret_addr;
+		uint32_t args[4];
+		uint32_t trace=0;
+		while(ebp!=0){
+			
+			prev_ebp=swaddr_read(ebp,4);
+			ret_addr=swaddr_read(ebp+4,4);
+			int i;
+			char *name=NULL;
+			for(i=1;i<=4;i++){
+				args[i]=swaddr_read(ebp-4*i,4);					
+			}
+			for(i=0;i<nr_symtab_entry;i++){
+				if(symtab[i].st_value<=eip&&symtab[i].st_value+symtab[i].st_size>eip){
+					name = strtab+symtab[i].st_name;
+					break;
+				}
+			}
+			if(name==NULL){
+				printf("Invalid backtrace\n");
+				return 0;
+			}
+			printf("#%d  0x%08x in %s (0x%08x,0x%08x,0x%08x,0x%08x)\n",trace,eip,name,args[0],args[1],args[2],args[3]);
+			trace++;
+			ebp=prev_ebp;
+			eip=ret_addr;
+			//printf("0x%08x\n0x%08x\n",ebp,eip);
+			/*#0  func_c (x=4) at bt_test.c:7
+			#1  0x000000000040116a in func_b (y=3) at bt_test.c:12
+			#2  0x000000000040118a in func_a (z=1) at bt_test.c:17
+			#3  0x00000000004011a6 in main () at bt_test.c:23*/
+			
+		}
+		return 0;
+	}
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -195,7 +251,8 @@ static struct {
 	{ "x", "Scan memory", cmd_x},
 	{ "p", "Evaluate an expression", cmd_p},
 	{ "w", "Set a watchpoint", cmd_w},
-	{ "d", "Delete a watchpoint", cmd_d}
+	{ "d", "Delete a watchpoint", cmd_d},
+	{ "bt", "Show the backtrace",cmd_bt}
 
 	/* TODO: Add more commands */
 
