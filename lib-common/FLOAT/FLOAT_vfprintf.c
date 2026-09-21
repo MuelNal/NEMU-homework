@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "FLOAT.h"
+#include "sys/mman.h"
 
 extern char _vfprintf_internal;
 extern char _fpmaxtostr;
@@ -14,9 +15,30 @@ __attribute__((used)) static int format_FLOAT(FILE *stream, FLOAT f) {
 	 *         0x00010000    "1.000000"
 	 *         0x00013333    "1.199996"
 	 */
-
 	char buf[80];
-	int len = sprintf(buf, "0x%08x", f);
+	int tar = f;
+	int op = (tar >> 31) & 1;
+	if (op) tar = -tar;
+
+	uint32_t tar_int = (tar >> 16) & 0xffff;
+	uint32_t tar_frac = tar & 0xffff;
+
+	char frac_str[7];
+	uint32_t rem = tar_frac;
+	int i = 0;
+	for (; i < 6; i++) {
+		rem *= 10;
+		frac_str[i] = '0' + (rem / 65536);
+		rem = rem % 65536;
+	}
+	frac_str[6] = '\0';
+
+	int len;
+	if (op) {
+		len = sprintf(buf, "-%u.%s", tar_int, frac_str);
+	} else {
+		len = sprintf(buf, "%u.%s", tar_int, frac_str);
+	}
 	return __stdio_fwrite(buf, len, stream);
 }
 
@@ -26,6 +48,25 @@ static void modify_vfprintf() {
 	 * is the code section in _vfprintf_internal() relative to the
 	 * hijack.
 	 */
+
+	
+
+	void (*vf)(void)=&_vfprintf_internal;
+	void (*f_F)(void)=&format_FLOAT;
+	int v2call_offset=775;
+	int v2format_offset=f_F-(vf+v2call_offset+4);
+	uint8_t modify_opcode[6]={0x83,0xec,0x08,0xff,0x32,0x90};
+	// mprotect disabled for NEMU (no memory protection; int $0x80 not implemented)
+	// int modify_section=vf+v2call_offset-100;
+	// mprotect((void *)((modify_section)&0xfffff000),4096*2, PROT_READ|PROT_WRITE|PROT_EXEC);
+
+	memcpy((void *)(vf+v2call_offset),&v2format_offset,4);
+	memcpy((void *)(vf+v2call_offset-14),&modify_opcode,6);
+	uint8_t nop2[2] = {0x90, 0x90};
+	memcpy((void *)(vf + 740), nop2, 2);
+	memcpy((void *)(vf + 744), nop2, 2);
+
+
 
 #if 0
 	else if (ppfs->conv_num <= CONV_A) {  /* floating point */
@@ -67,12 +108,23 @@ static void modify_vfprintf() {
 }
 
 static void modify_ppfs_setargs() {
+	extern char _ppfs_setargs;
+	void (*pp)(void) = &_ppfs_setargs;
+	int double_offset = 113;
+	int ull_offset = 163;
+	int jmp_offset = ull_offset - (double_offset + 5);
+	uint8_t jmp_code[5] = {0xe9, 0, 0, 0, 0};
+	memcpy(jmp_code + 1, &jmp_offset, 4);
+	// mprotect disabled for NEMU (no memory protection; int $0x80 not implemented)
+	// int page = ((int)pp) & 0xfffff000;
+	// mprotect((void *)page, 4096 * 2, PROT_READ | PROT_WRITE | PROT_EXEC);
+	memcpy((void *)(pp + double_offset), jmp_code, 5);
 	/* TODO: Implement this function to modify the action of preparing
 	 * "%f" arguments for _vfprintf_internal() in _ppfs_setargs().
 	 * Below is the code section in _vfprintf_internal() relative to
 	 * the modification.
 	 */
-
+	
 #if 0
 	enum {                          /* C type: */
 		PA_INT,                       /* int */
