@@ -7,15 +7,16 @@
 #define CACHE_SET_BITS 7 
 #define CACHE_TAG 19
 
-uint32_t dram_read(hwaddr_t, size_t);
-void dram_write(hwaddr_t, size_t, uint32_t);
+void cache_write_L2(hwaddr_t hwaddr, size_t len, uint32_t data);
+uint32_t cache_read_L2(hwaddr_t hwaddr, size_t len);
+void init_cache_L2();
 
 typedef struct {
 	struct{
 		uint32_t valid :1;
 		uint32_t tag :CACHE_TAG;
 		uint8_t data[CACHE_BLOCKS];
-	}ways[8];
+	}ways[CACHE_WAYS];
 }si_set;
 
 si_set cache_sets[CACHE_SETS];
@@ -24,7 +25,7 @@ void init_cache()
 {
 	int i,j,k;
 	for (i = 0; i < CACHE_SETS; i++) {
-		for (j = 0; j < 8; j++) {
+		for (j = 0; j < CACHE_WAYS; j++) {
             cache_sets[i].ways[j].valid = 0;
             cache_sets[i].ways[j].tag   = 0;
 
@@ -33,6 +34,7 @@ void init_cache()
             }
         }
     }
+	init_cache_L2();
 }
 
 void cache_update(hwaddr_t hwaddr, size_t len, uint32_t data)
@@ -68,8 +70,7 @@ void cache_update(hwaddr_t hwaddr, size_t len, uint32_t data)
 
 void cache_write(hwaddr_t hwaddr, size_t len, uint32_t data)
 {
-
-	dram_write(hwaddr, len, data);   
+	cache_write_L2(hwaddr, len, data);   
     cache_update(hwaddr, len, data);
 }
 
@@ -109,7 +110,7 @@ uint32_t cache_read(hwaddr_t hwaddr, size_t len)
 
 	uint32_t block_addr = hwaddr & ~(CACHE_BLOCKS - 1);
 		for(i = 0; i < CACHE_BLOCKS; i++){
-		cache_sets[sw_index].ways[way].data[i] = dram_read(block_addr + i, 1) & 0xff;
+		cache_sets[sw_index].ways[way].data[i] = cache_read_L2(block_addr + i, 1) & 0xff;
 	}
 	cache_sets[sw_index].ways[way].valid=1;
 	cache_sets[sw_index].ways[way].tag=sw_tag;
