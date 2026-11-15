@@ -80,6 +80,7 @@ typedef struct {
 	Sreg es, cs, ss, ds;
 	GDTR gdtr;
 	CR0 cr0;
+	CR3 cr3;
 
 } CPU_state;
 

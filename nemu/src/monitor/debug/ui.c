@@ -78,6 +78,12 @@ static int cmd_info(char *args) {
 			printf("$%s\t(0x%08x)\n",regsl[i],cpu.gpr[i]._32);
 		}
 		printf("$eip\t(0x%08x)\n",cpu.eip);
+		printf("$cr0\t(0x%08x)\n",cpu.cr0.val);
+		printf("$cr3\t(0x%08x)\n",cpu.cr3.val);
+		printf("$cs\t(0x%04x, base 0x%08x, limit 0x%08x)\n",cpu.cs.selector,cpu.cs.cache.base,cpu.cs.cache.limit);
+		printf("$ds\t(0x%04x, base 0x%08x, limit 0x%08x)\n",cpu.ds.selector,cpu.ds.cache.base,cpu.ds.cache.limit);
+		printf("$es\t(0x%04x, base 0x%08x, limit 0x%08x)\n",cpu.es.selector,cpu.es.cache.base,cpu.es.cache.limit);
+		printf("$ss\t(0x%04x, base 0x%08x, limit 0x%08x)\n",cpu.ss.selector,cpu.ss.cache.base,cpu.ss.cache.limit);
 	}
 	else if(*state=='w'){
 		list_watchpoint();
@@ -236,6 +242,16 @@ static int cmd_bt(char *args){
 	}
 }
 
+static int cmd_pt(char *args){
+	lnaddr_t addr;
+	if(args==NULL||sscanf(args,"%x",&addr)!=1){
+		printf("please input a valid address\n");
+		return 0;
+	}
+	printf("linear 0x%08x -> physical 0x%08x\n",addr,page_translate(addr));
+	return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -252,7 +268,8 @@ static struct {
 	{ "p", "Evaluate an expression", cmd_p},
 	{ "w", "Set a watchpoint", cmd_w},
 	{ "d", "Delete a watchpoint", cmd_d},
-	{ "bt", "Show the backtrace",cmd_bt}
+	{ "bt", "Show the backtrace",cmd_bt},
+	{ "pt", "Translate a linear address to a physical address", cmd_pt}
 
 	/* TODO: Add more commands */
 

@@ -65,29 +65,36 @@ make_helper(lgdt) {
 	return len + 1;
 }
 
-/* mov r32, cr0: 0F 20 /r */
+/* mov r32, cr0/cr3: 0F 20 /r */
 make_helper(mov_cr2r) {
 	ModR_M m;
 	m.val = instr_fetch(eip + 1, 1);
 	assert(m.mod == 3);
-	assert(m.opcode == 0);
 
-	reg_l(m.R_M) = cpu.cr0.val;
+	/* the reg field of ModR_M selects the control register */
+	switch(m.opcode) {
+		case 0: reg_l(m.R_M) = cpu.cr0.val; break;
+		case 3: reg_l(m.R_M) = cpu.cr3.val; break;
+		default: assert(0);
+	}
 
-	print_asm("mov %%cr0, %%%s", regsl[m.R_M]);
+	print_asm("mov %%cr%d, %%%s", (int)m.opcode, regsl[m.R_M]);
 	return 2;
 }
 
-/* mov cr0, r32: 0F 22 /r */
+/* mov cr0/cr3, r32: 0F 22 /r */
 make_helper(mov_r2cr) {
 	ModR_M m;
 	m.val = instr_fetch(eip + 1, 1);
 	assert(m.mod == 3);
-	assert(m.opcode == 0);
 
-	cpu.cr0.val = reg_l(m.R_M);
+	switch(m.opcode) {
+		case 0: cpu.cr0.val = reg_l(m.R_M); break;
+		case 3: cpu.cr3.val = reg_l(m.R_M); break;
+		default: assert(0);
+	}
 
-	print_asm("mov %%%s, %%cr0", regsl[m.R_M]);
+	print_asm("mov %%%s, %%cr%d", regsl[m.R_M], (int)m.opcode);
 	return 2;
 }
 

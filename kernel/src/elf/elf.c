@@ -2,6 +2,7 @@
 #include "memory.h"
 #include <string.h>
 #include <elf.h>
+#include "x86.h"
 
 #define ELF_OFFSET_IN_DISK 0
 
@@ -49,6 +50,17 @@ uint32_t loader() {
 			 * to the memory region [VirtAddr, VirtAddr + FileSiz)
 			 */
 			//assert(0);
+#ifdef IA32_PAGE
+			/* `p_vaddr' is a virtual address of the user process, which is
+			 * not in the kernel's address space, so the kernel cannot access
+			 * it. Allocate some physical memory for this segment, and fill
+			 * the page tables of the user process. After that, the segment
+			 * can be accessed by the physical address mm_malloc() returns. */
+			uint32_t pa = mm_malloc(ph[i].p_vaddr, ph[i].p_memsz);
+			ramdisk_read((void *)pa, ELF_OFFSET_IN_DISK + ph[i].p_offset, ph[i].p_filesz);
+			memset((void *)(pa + ph[i].p_filesz), 0, ph[i].p_memsz - ph[i].p_filesz);
+#else
+			//assert(0);
 			ramdisk_read((void *)ph[i].p_vaddr,ELF_OFFSET_IN_DISK+ph[i].p_offset,ph[i].p_filesz);
 			
 			/* TODO: zero the memory region 
@@ -57,7 +69,7 @@ uint32_t loader() {
 			if(ph[i].p_memsz>ph[i].p_filesz){
 				memset((void *)(ph[i].p_vaddr+ph[i].p_filesz),0,ph[i].p_memsz-ph[i].p_filesz);
 			}
-						
+#endif
 #ifdef IA32_PAGE
 			/* Record the program break for future use. */
 			extern uint32_t cur_brk, max_brk;

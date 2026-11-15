@@ -27,4 +27,7 @@ void hwaddr_write(hwaddr_t, size_t, uint32_t);
 /* segment-level address translation */
 lnaddr_t seg_translate(swaddr_t addr, size_t len, uint8_t sreg);
 
+/* page-level address translation */
+hwaddr_t page_translate(lnaddr_t addr);
+
 #endif

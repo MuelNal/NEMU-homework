@@ -14,6 +14,20 @@ make_helper(int3) {
 	return 1;
 }
 
+/* cld: clear the direction flag */
+make_helper(cld) {
+	cpu.eflags.DF = 0;
+	print_asm("cld");
+	return 1;
+}
+
+/* std: set the direction flag */
+make_helper(std) {
+	cpu.eflags.DF = 1;
+	print_asm("std");
+	return 1;
+}
+
 make_helper(lea) {
 	ModR_M m;
 	m.val = instr_fetch(eip + 1, 1);

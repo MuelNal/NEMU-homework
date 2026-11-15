@@ -97,6 +97,7 @@ void restart() {
 	 * in the real mode; the invisible part of CS is also initialized so
 	 * that instruction fetch works right after the PE bit is set. */
 	cpu.cr0.val = 0;
+	cpu.cr3.val = 0;
 	cpu.gdtr.base = 0;
 	cpu.gdtr.limit = 0;
 	cpu.es.cache.base = 0;
