@@ -242,13 +242,35 @@ static int cmd_bt(char *args){
 	}
 }
 
-static int cmd_pt(char *args){
+static int cmd_page(char *args){
 	lnaddr_t addr;
+	hwaddr_t pa;
+	int status;
+
 	if(args==NULL||sscanf(args,"%x",&addr)!=1){
-		printf("please input a valid address\n");
+		printf("Usage: page ADDR\n");
 		return 0;
 	}
-	printf("linear 0x%08x -> physical 0x%08x\n",addr,page_translate(addr));
+
+	pa = addr;
+	status = page_walk(addr, &pa);
+	switch(status) {
+		case PG_OK:
+			printf("linear 0x%08x -> physical 0x%08x\n", addr, pa);
+			break;
+		case PG_NO_PAGING:
+			printf("linear 0x%08x -> physical 0x%08x (paging is not enabled)\n", addr, pa);
+			break;
+		case PG_PDE_ABSENT:
+			printf("linear 0x%08x: page directory entry is not present\n", addr);
+			break;
+		case PG_PTE_ABSENT:
+			printf("linear 0x%08x: page table entry is not present\n", addr);
+			break;
+		default:
+			printf("linear 0x%08x: page-level address translation failed\n", addr);
+			break;
+	}
 	return 0;
 }
 
@@ -269,7 +291,7 @@ static struct {
 	{ "w", "Set a watchpoint", cmd_w},
 	{ "d", "Delete a watchpoint", cmd_d},
 	{ "bt", "Show the backtrace",cmd_bt},
-	{ "pt", "Translate a linear address to a physical address", cmd_pt}
+	{ "page", "Print the result of the page-level address translation of ADDR", cmd_page}
 
 	/* TODO: Add more commands */
 

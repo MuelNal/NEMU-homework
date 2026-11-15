@@ -16,27 +16,48 @@ void hwaddr_write(hwaddr_t addr, size_t len, uint32_t data) {
 /* Convert a linear address into a physical address by a page walk.
  * Paging is enabled only after both the PE bit and the PG bit of CR0
  * are set, so it is checked in restart() and in every access. */
-hwaddr_t page_translate(lnaddr_t addr) {
+
+/* Do the page walk without aborting NEMU, so that the monitor command `page'
+ * can report the reason of a failed translation to the user:
+ * the physical address is stored in *pa, and one of the PG_* status codes is
+ * returned. When paging is disabled the linear address is used as it is. */
+int page_walk(lnaddr_t addr, hwaddr_t *pa) {
 	PDE pde;
 	PTE pte;
 	uint32_t pdir_idx, ptable_idx;
 
 	/* paging is enabled only when both PE and PG are set, see i386 manual */
-	if(cpu.cr0.protect_enable == 0 || cpu.cr0.paging == 0) { return addr; }
+	if(cpu.cr0.protect_enable == 0 || cpu.cr0.paging == 0) {
+		*pa = addr;
+		return PG_NO_PAGING;
+	}
 
 	pdir_idx = (addr >> 22) & 0x3ff;
 	ptable_idx = (addr >> 12) & 0x3ff;
 
 	/* The base addresses in PDE/PTE/CR3 are physical addresses. */
 	pde.val = hwaddr_read((cpu.cr3.page_directory_base << 12) + pdir_idx * 4, 4);
-	Assert(pde.present == 1,
-			"page directory entry(linear address = 0x%08x) is not present", addr);
+	if(pde.present == 0) { return PG_PDE_ABSENT; }
 
 	pte.val = hwaddr_read((pde.page_frame << 12) + ptable_idx * 4, 4);
-	Assert(pte.present == 1,
-			"page table entry(linear address = 0x%08x) is not present", addr);
+	if(pte.present == 0) { return PG_PTE_ABSENT; }
 
-	return (pte.page_frame << 12) | (addr & 0xfff);
+	*pa = (pte.page_frame << 12) | (addr & 0xfff);
+	return PG_OK;
+}
+
+hwaddr_t page_translate(lnaddr_t addr) {
+	hwaddr_t pa = addr;
+	int status = page_walk(addr, &pa);
+
+	/* no paging: the linear address is the physical address */
+	if(status == PG_NO_PAGING) { return pa; }
+
+	Assert(status == PG_OK, "%s(linear address = 0x%08x)",
+			status == PG_PDE_ABSENT ? "page directory entry is not present"
+			: status == PG_PTE_ABSENT ? "page table entry is not present"
+			: "page-level address translation failed", addr);
+	return pa;
 }
 
 uint32_t lnaddr_read(lnaddr_t addr, size_t len) {

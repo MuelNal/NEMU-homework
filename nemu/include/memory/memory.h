@@ -30,4 +30,12 @@ lnaddr_t seg_translate(swaddr_t addr, size_t len, uint8_t sreg);
 /* page-level address translation */
 hwaddr_t page_translate(lnaddr_t addr);
 
+/* The status of a page walk, see page_walk(). */
+enum { PG_OK = 0, PG_NO_PAGING, PG_PDE_ABSENT, PG_PTE_ABSENT };
+
+/* Do a page walk for the monitor command `page'.
+ * Unlike page_translate(), this function never aborts NEMU, so that the
+ * reason of a failed translation can be reported to the user. */
+int page_walk(lnaddr_t addr, hwaddr_t *pa);
+
 #endif
