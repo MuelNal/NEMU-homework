@@ -94,7 +94,7 @@ static int cmd_x(char *args){
 		if(steps>=1){
 			int i=0;
 			for(;i<steps;i++){			
-				uint32_t data=swaddr_read(memory+i*4,4);
+				uint32_t data=swaddr_read(memory+i*4,4,SREG_DS);
 				printf("0x%08x",data);	
 				// int j=0;
 				// for(;j<4;j++){
@@ -204,12 +204,12 @@ static int cmd_bt(char *args){
 		uint32_t trace=0;
 		while(ebp!=0){
 			
-			prev_ebp=swaddr_read(ebp,4);
-			ret_addr=swaddr_read(ebp+4,4);
+			prev_ebp=swaddr_read(ebp,4,SREG_SS);
+			ret_addr=swaddr_read(ebp+4,4,SREG_SS);
 			int i;
 			char *name=NULL;
 			for(i=1;i<=4;i++){
-				args[i]=swaddr_read(ebp-4*i,4);					
+				args[i]=swaddr_read(ebp-4*i,4,SREG_SS);					
 			}
 			for(i=0;i<nr_symtab_entry;i++){
 				if(symtab[i].st_value<=eip&&symtab[i].st_value+symtab[i].st_size>eip){

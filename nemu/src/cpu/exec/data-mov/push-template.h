@@ -6,11 +6,11 @@ static void do_execute() {
 	if(DATA_BYTE == 1) {
 		/* push imm8: sign-extend to 32 bits, push 4 bytes */
 		cpu.esp -= 4;
-		swaddr_write(cpu.esp, 4, (int8_t)op_src->val);
+		swaddr_write(cpu.esp, 4, (int8_t)op_src->val, SREG_SS);
 	}
 	else {
 		cpu.esp -= DATA_BYTE;
-		MEM_W(cpu.esp, op_src->val);
+		MEM_W(cpu.esp, op_src->val, SREG_SS);
 	}
     print_asm_template1();
 }

@@ -3,6 +3,28 @@
 
 #include "common.h"
 
+#include "x86-inc/cpu.h"
+#include "x86-inc/mmu.h"
+
+/* The encoding of the segment registers, see i386 manual. */
+enum { SREG_ES = 0, SREG_CS = 1, SREG_SS = 2, SREG_DS = 3 };
+
+/* A segment register: the visible selector and the invisible part
+ * (descriptor cache). Only `base' and `limit' are simulated. */
+typedef struct {
+	uint16_t selector;
+	struct {
+		uint32_t base;
+		uint32_t limit;
+	} cache;
+} Sreg;
+
+/* The Global Descriptor Table Register. */
+typedef struct {
+	uint32_t base;		/* the linear address of the GDT */
+	uint16_t limit;
+} GDTR;
+
 enum { R_EAX, R_ECX, R_EDX, R_EBX, R_ESP, R_EBP, R_ESI, R_EDI };
 enum { R_AX, R_CX, R_DX, R_BX, R_SP, R_BP, R_SI, R_DI };
 enum { R_AL, R_CL, R_DL, R_BL, R_AH, R_CH, R_DH, R_BH };
@@ -55,9 +77,23 @@ typedef struct {
 		uint32_t val;
 	} eflags;
 
+	Sreg es, cs, ss, ds;
+	GDTR gdtr;
+	CR0 cr0;
+
 } CPU_state;
 
 extern CPU_state cpu;
+
+static inline Sreg *seg_reg(uint8_t sreg) {
+	switch(sreg) {
+		case SREG_ES: return &cpu.es;
+		case SREG_CS: return &cpu.cs;
+		case SREG_SS: return &cpu.ss;
+		case SREG_DS: return &cpu.ds;
+		default: assert(0); return NULL;
+	}
+}
 
 static inline int check_reg_index(int index) {
 	assert(index >= 0 && index < 8);

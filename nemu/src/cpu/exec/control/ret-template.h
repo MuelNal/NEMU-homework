@@ -3,7 +3,7 @@
 #define instr ret
 
 make_helper(instr){
-    cpu.eip = MEM_R(cpu.esp)-1; 
+    cpu.eip = MEM_R(cpu.esp, SREG_SS)-1; 
     cpu.esp += DATA_BYTE;
     print_asm("ret");
     return 1;
@@ -12,7 +12,7 @@ make_helper(instr){
 
         make_helper(ret_i_w){
     uint16_t len=decode_i_w(eip+1); 
-    cpu.eip = MEM_R(cpu.esp)-1-len  ;
+    cpu.eip = MEM_R(cpu.esp, SREG_SS)-1-len  ;
     cpu.esp += 4+op_src->val;
     print_asm(str(instr) " 0x%x", op_src->val);
     return len+1;

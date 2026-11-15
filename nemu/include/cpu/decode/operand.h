@@ -14,6 +14,7 @@ typedef struct {
 		uint32_t imm;			//无符号立即数
 		int32_t simm;			//有符号立即数
 	};
+	uint8_t sreg;				//段寄存器的编码
 	uint32_t val;				//所填的数据
 	char str[OP_STR_SIZE];		//操作码转化为字符串
 } Operand;

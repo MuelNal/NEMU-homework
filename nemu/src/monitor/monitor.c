@@ -92,4 +92,19 @@ void restart() {
 	init_ddr3();
 
 	init_cache();
+
+	/* Initialize the segment registers and CR0. At power-on the CPU runs
+	 * in the real mode; the invisible part of CS is also initialized so
+	 * that instruction fetch works right after the PE bit is set. */
+	cpu.cr0.val = 0;
+	cpu.gdtr.base = 0;
+	cpu.gdtr.limit = 0;
+	cpu.es.cache.base = 0;
+	cpu.es.cache.limit = 0xffffffff;
+	cpu.cs.cache.base = 0;
+	cpu.cs.cache.limit = 0xffffffff;
+	cpu.ss.cache.base = 0;
+	cpu.ss.cache.limit = 0xffffffff;
+	cpu.ds.cache.base = 0;
+	cpu.ds.cache.limit = 0xffffffff;
 }

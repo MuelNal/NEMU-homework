@@ -232,7 +232,7 @@ int32_t eval(int32_t p,int32_t q,bool *success){
 			switch (tokens[p].type)
 			{
 			case NOT: return !eval(p+1,q,success);
-			case DRp: return swaddr_read(eval(p+1,q,success),4);
+			case DRp: return swaddr_read(eval(p+1,q,success),4,SREG_DS);
 			case NEG: return 0-eval(p+1,q,success);
 			default: assert(0);break;
 			}
